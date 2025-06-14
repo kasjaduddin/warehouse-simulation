@@ -5,7 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - PlayerHand
-  - RfidTag
+  - Anchor
+  - BinTag
+  - ItemTag
   layers:
   - Default
   - TransparentFX
