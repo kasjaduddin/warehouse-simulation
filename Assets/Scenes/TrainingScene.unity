@@ -16180,7 +16180,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 16
+  m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!64 &332263601
 MeshCollider:
@@ -16197,7 +16197,7 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
@@ -69809,7 +69809,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6168147286285378791, guid: d86126e18a8dc524b84f068109cf10a6, type: 3}
       propertyPath: m_Name
-      value: PlasticBox01_Blue (5)
+      value: Bin 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6168147286285378791, guid: d86126e18a8dc524b84f068109cf10a6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 6622762758620054013, guid: d86126e18a8dc524b84f068109cf10a6, type: 3}
@@ -97405,6 +97409,10 @@ PrefabInstance:
       value: -0.0409
       objectReference: {fileID: 0}
     - target: {fileID: 3381998023311848153, guid: 008a6dfed0404a145b94ca90e59f95dc, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.022
+      objectReference: {fileID: 0}
+    - target: {fileID: 3381998023311848153, guid: 008a6dfed0404a145b94ca90e59f95dc, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0.097
       objectReference: {fileID: 0}
@@ -97471,6 +97479,10 @@ PrefabInstance:
     - target: {fileID: 6483649817949625749, guid: 008a6dfed0404a145b94ca90e59f95dc, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7043330562700843255, guid: 008a6dfed0404a145b94ca90e59f95dc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8061970039358268356, guid: 008a6dfed0404a145b94ca90e59f95dc, type: 3}
       propertyPath: m_Enabled
