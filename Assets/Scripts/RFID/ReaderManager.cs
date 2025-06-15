@@ -6,6 +6,13 @@ namespace Rfid
 {
     public class ReaderManager : MonoBehaviour
     {
+        private BinTag detectedBinTag;
+
+        public BinTag DetectedBinTag
+        {
+            get { return detectedBinTag; }
+        }
+
         void Start()
         {
 
@@ -20,7 +27,7 @@ namespace Rfid
         {
             if (other.CompareTag("BinTag"))
             {
-                Debug.Log("RFID Tag Detected: " + other.name);
+                detectedBinTag = other.GetComponent<BinTag>();
             }
         }
     }

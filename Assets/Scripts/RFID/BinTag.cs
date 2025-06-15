@@ -26,7 +26,6 @@ namespace Rfid
         private async void StartAsync()
         {
             await GetTagId();
-            Debug.Log("BinTag ID: " + id);
             GetBinCode();
         }
 
@@ -34,29 +33,21 @@ namespace Rfid
         {
             await Task.Yield();
 
-            if (PlayerPrefs.HasKey(gameObject.name))
+            int parsedNumber;
+            if (int.TryParse(gameObject.name.Substring(4), out parsedNumber))
             {
-                Debug.Log("Tag ID already exists in PlayerPrefs for: " + gameObject.name);
-                id = PlayerPrefs.GetInt(gameObject.name);
+                id = parsedNumber;
             }
             else
             {
-                Debug.Log("Tag ID not found in PlayerPrefs for: " + gameObject.name);
-                int parsedNumber;
-                if (int.TryParse(gameObject.name.Substring(4), out parsedNumber))
-                {
-                    PlayerPrefs.SetInt(gameObject.name, parsedNumber);
-                    id = parsedNumber;
-                }
-                else
-                {
-                    Debug.Log("Invalid format");
-                }
+                Debug.Log("Invalid format");
+                id = -1;
             }
         }
 
         private void GetBinCode()
         {
+            binCode = string.Empty;
             //StartCoroutine(FirebaseServices.ReadData("rfid/bin_tags", "id", id.ToString(), data =>
             //{
             //    Debug.Log($"Mencari Bin Code untuk Tag ID: {id} di Firebase...");
