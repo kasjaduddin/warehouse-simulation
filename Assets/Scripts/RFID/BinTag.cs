@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Threading.Tasks;
+using System;
+using Unity.VisualScripting;
 
 namespace Rfid
 {
@@ -18,6 +20,7 @@ namespace Rfid
             get { return binCode; }
             set { binCode = value; }
         }
+
         void Start()
         {
             StartAsync();
@@ -48,20 +51,24 @@ namespace Rfid
         private void GetBinCode()
         {
             binCode = string.Empty;
-            //StartCoroutine(FirebaseServices.ReadData("rfid/bin_tags", "id", id.ToString(), data =>
-            //{
-            //    Debug.Log($"Mencari Bin Code untuk Tag ID: {id} di Firebase...");
-            //    Debug.Log($"Data yang diterima: {data}");
-            //    if (data != null)
-            //    {
-            //        binCode = data["bin_code"].ToString();
-            //        Debug.Log($"Bin Code untuk {gameObject.name}: {data["bin_code"]}");
-            //    }
-            //    else
-            //    {
-            //        Debug.LogError("ERROR: Gagal mengambil data bin tags dari Firebase.");
-            //    }
-            //}));
+            StartCoroutine(FirebaseServices.ReadData("rfid/bin_tags", data =>
+            {
+                if (data != null)
+                {
+                    foreach (var tag in data)
+                    {
+                        if (tag["id"].ToString() == id.ToString())
+                        {
+                            binCode = tag["bin_code"].ToString();
+                            Debug.Log($"Bin Code untuk {gameObject.name}: {data["bin_code"]}");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError("ERROR: Gagal mengambil data bin tags dari Firebase.");
+                }
+            }));
         }
     }
 }

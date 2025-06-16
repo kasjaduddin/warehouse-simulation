@@ -86,7 +86,7 @@ namespace Rfid
                 Debug.Log($"Tag belum digunakan, mendaftarkan untuk bin: {tag.BinCode}");
                 tag.BinCode = selectedBinCode;
                 await SaveTag(tag, selectedBinCode);
-                await UpdateDataOnCompanySystem(selectedBinCode);
+                StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
             }
         }
 
@@ -112,12 +112,12 @@ namespace Rfid
             }));
         }
 
-        private async Task UpdateDataOnCompanySystem(string binCode)
+        private IEnumerator UpdateDataOnCompanySystem(string binCode)
         {
-            await Task.Yield();
+            yield return null;
 
             int currentTags = 0;
-            StartCoroutine(FirebaseServices.ReadData("bins", data =>
+            yield return StartCoroutine(FirebaseServices.ReadData("bins", data =>
             {
                 if (data != null)
                 {
@@ -133,6 +133,7 @@ namespace Rfid
                 else
                 {
                     Debug.LogError("Failed to retrieve data.");
+                    currentTags = -1;
                 }
             }));
 
@@ -141,7 +142,7 @@ namespace Rfid
             {
                 { "number_of_tags", newTagCount }
             };
-            StartCoroutine(FirebaseServices.ModifyData("bins", binData, binCode, "code", message =>
+            yield return StartCoroutine(FirebaseServices.ModifyData("bins", binData, binCode, "code", message =>
             {
                 if (message.Contains("successfully"))
                 {
