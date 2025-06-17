@@ -60,13 +60,12 @@ namespace Rfid
                         if (tag["id"].ToString() == id.ToString())
                         {
                             binCode = tag["bin_code"].ToString();
-                            Debug.Log($"Bin Code untuk {gameObject.name}: {data["bin_code"]}");
                         }
                     }
                 }
                 else
                 {
-                    Debug.LogError("ERROR: Gagal mengambil data bin tags dari Firebase.");
+                    Debug.Log("No bin tag found");
                 }
             }));
         }

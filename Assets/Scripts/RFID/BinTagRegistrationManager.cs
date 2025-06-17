@@ -71,7 +71,7 @@ namespace Rfid
             }));
         }
 
-        public async void WriteTag()
+        public void ReadTag()
         {
             string selectedBinCode = binCodeDropdown.captionText.text;
             BinTag tag = rfidReader.DetectedBinTag;
@@ -83,10 +83,34 @@ namespace Rfid
             }
             else
             {
+                Debug.Log($"Tag belum digunakan");
+                //tag.BinCode = selectedBinCode;
+                //await SaveTag(tag, selectedBinCode);
+                //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+            }
+        }
+
+        public async void WriteTag()
+        {
+            string selectedBinCode = binCodeDropdown.captionText.text;
+            BinTag tag = rfidReader.DetectedBinTag;
+            if (tag.BinCode != string.Empty)
+            {
+                Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
+            }
+            else
+            {
                 Debug.Log($"Tag belum digunakan, mendaftarkan untuk bin: {tag.BinCode}");
                 tag.BinCode = selectedBinCode;
-                await SaveTag(tag, selectedBinCode);
-                StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                try
+                {
+                    await SaveTag(tag, selectedBinCode);
+                    StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                }
+                catch
+                {
+                    Debug.LogError("Gagal menyimpan tag ke Firebase atau memperbarui sistem perusahaan.");
+                }
             }
         }
 
