@@ -138,9 +138,7 @@ namespace Rfid
 
         private IEnumerator UpdateDataOnCompanySystem(string binCode)
         {
-            yield return null;
-
-            int currentTags = 0;
+            int currentTags = -1;
             yield return StartCoroutine(FirebaseServices.ReadData("bins", data =>
             {
                 if (data != null)
@@ -161,6 +159,7 @@ namespace Rfid
                 }
             }));
 
+            yield return new WaitUntil(() => currentTags != -1);
             int newTagCount = currentTags + 1;
             var binData = new Dictionary<string, object>
             {
