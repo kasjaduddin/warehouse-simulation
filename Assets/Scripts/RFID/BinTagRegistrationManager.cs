@@ -10,6 +10,9 @@ namespace Rfid
     {
         [SerializeField]
         private ReaderManager rfidReader;
+        [SerializeField]
+        private GameObject popup;
+        private GameObject binTagPopup;
 
         private TMP_Dropdown binCodeDropdown;
         private TextMeshProUGUI description;
@@ -21,6 +24,8 @@ namespace Rfid
             description = transform.Find("Description").GetComponent<TextMeshProUGUI>();
             tags = transform.Find("Tags").GetComponent<TextMeshProUGUI>();
             Invoke("GetBinCodes", 0.1f);
+
+            binTagPopup = popup.transform.Find("Bin Tag").gameObject;
         }
 
         private void OnDisable()
@@ -75,18 +80,25 @@ namespace Rfid
         {
             string selectedBinCode = binCodeDropdown.captionText.text;
             BinTag tag = rfidReader.DetectedBinTag;
-            Debug.Log("Detected tag ID: " + tag.Id);
-            Debug.Log("Detected bin code: " + tag.BinCode);
-            if (tag.BinCode != string.Empty)
+            if (!tag)
             {
-                Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
+                popup.SetActive(true);
+                binTagPopup.SetActive(true);
+                binTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
             }
             else
             {
-                Debug.Log($"Tag belum digunakan");
-                //tag.BinCode = selectedBinCode;
-                //await SaveTag(tag, selectedBinCode);
-                //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                if (tag.BinCode != string.Empty)
+                {
+                    Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
+                }
+                else
+                {
+                    Debug.Log($"Tag belum digunakan");
+                    //tag.BinCode = selectedBinCode;
+                    //await SaveTag(tag, selectedBinCode);
+                    //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                }
             }
         }
 

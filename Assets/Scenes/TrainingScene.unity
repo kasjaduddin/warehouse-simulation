@@ -137,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &470095
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10055,7 +10055,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &178987281
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10093,6 +10093,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rfidReader: {fileID: 4274288530723676701}
+  popup: {fileID: 1837904711}
 --- !u!1 &185150497
 GameObject:
   m_ObjectHideFlags: 0
@@ -22666,7 +22667,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &434446057
 RectTransform:
   m_ObjectHideFlags: 0
@@ -33420,7 +33421,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 640853459}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 178987282}
+        m_TargetAssemblyTypeName: Rfid.BinTagRegistrationManager, Assembly-CSharp
+        m_MethodName: ReadTag
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &640853459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -49331,7 +49344,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &996874947
 RectTransform:
   m_ObjectHideFlags: 0
@@ -83006,7 +83019,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1764455413
 Transform:
   m_ObjectHideFlags: 0
@@ -86009,7 +86022,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1837904712
 RectTransform:
   m_ObjectHideFlags: 0
