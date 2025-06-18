@@ -95,7 +95,7 @@ namespace Rfid
 
                     Transform informationPopup = binTagPopup.transform.Find("Tag Information");
                     informationPopup.gameObject.SetActive(true);
-                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text += tag.BinCode;
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to Bin {tag.BinCode}";
                 }
                 else
                 {
@@ -128,7 +128,6 @@ namespace Rfid
                     try
                     {
                         await SaveTag(tag, selectedBinCode);
-                        StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
                     }
                     catch
                     {
@@ -154,10 +153,13 @@ namespace Rfid
                 if (message.Contains("successfully"))
                 {
                     Debug.Log($"Tag {tag.Id} untuk Bin {binCode} berhasil ditambahkan ke Firebase.");
+                    StartCoroutine(UpdateDataOnCompanySystem(binCode));
                 }
                 else
                 {
-                    Debug.LogError(message);
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+                    binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
                 }
             }));
         }
@@ -165,6 +167,7 @@ namespace Rfid
         private IEnumerator UpdateDataOnCompanySystem(string binCode)
         {
             int currentTags = -1;
+            bool? successReadData = null;
             yield return StartCoroutine(FirebaseServices.ReadData("bins", data =>
             {
                 if (data != null)
@@ -174,34 +177,47 @@ namespace Rfid
                         if (bin["code"].ToString() == binCode)
                         {
                             currentTags = int.Parse(bin["number_of_tags"].ToString());
+                            successReadData = true;
                             break;
                         }
                     }
                 }
                 else
                 {
-                    Debug.LogError("Failed to retrieve data.");
-                    currentTags = -1;
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+                    binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    successReadData = false;
                 }
             }));
 
-            yield return new WaitUntil(() => currentTags != -1);
-            int newTagCount = currentTags + 1;
-            var binData = new Dictionary<string, object>
+            yield return new WaitUntil(() => successReadData != null);
+            if (successReadData == true)
             {
-                { "number_of_tags", newTagCount }
-            };
-            yield return StartCoroutine(FirebaseServices.ModifyData("bins", binData, binCode, "code", message =>
-            {
-                if (message.Contains("successfully"))
+                int newTagCount = currentTags + 1;
+                var binData = new Dictionary<string, object>
                 {
-                    Debug.Log($"Bin {binCode} berhasil diperbarui di Company System.");
-                }
-                else
+                    { "number_of_tags", newTagCount }
+                };
+                yield return StartCoroutine(FirebaseServices.ModifyData("bins", binData, binCode, "code", message =>
                 {
-                    Debug.LogError(message);
-                }
-            }));
+                    if (message.Contains("successfully"))
+                    {
+                        popup.SetActive(true);
+                        binTagPopup.SetActive(true);
+
+                        Transform informationPopup = binTagPopup.transform.Find("Success Write Tag");
+                        informationPopup.gameObject.SetActive(true);
+                        informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text += binCode;
+                    }
+                    else
+                    {
+                        popup.SetActive(true);
+                        binTagPopup.SetActive(true);
+                        binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                }));
+            }
         }
     }
 }
