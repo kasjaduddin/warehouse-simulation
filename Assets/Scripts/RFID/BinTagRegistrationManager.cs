@@ -99,10 +99,9 @@ namespace Rfid
                 }
                 else
                 {
-                    Debug.Log($"Tag belum digunakan");
-                    //tag.BinCode = selectedBinCode;  
-                    //await SaveTag(tag, selectedBinCode);  
-                    //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));  
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+                    binTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
                 }
             }
         }
