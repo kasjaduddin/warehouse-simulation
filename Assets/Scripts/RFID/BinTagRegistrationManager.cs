@@ -124,7 +124,6 @@ namespace Rfid
                 }
                 else
                 {
-                    Debug.Log($"Tag belum digunakan, mendaftarkan untuk bin: {tag.BinCode}");
                     tag.BinCode = selectedBinCode;
                     try
                     {
@@ -133,7 +132,9 @@ namespace Rfid
                     }
                     catch
                     {
-                        Debug.LogError("Gagal menyimpan tag ke Firebase atau memperbarui sistem perusahaan.");
+                        popup.SetActive(true);
+                        binTagPopup.SetActive(true);
+                        binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
                     }
                 }
             }
