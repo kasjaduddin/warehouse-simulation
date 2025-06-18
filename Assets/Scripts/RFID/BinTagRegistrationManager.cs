@@ -110,22 +110,31 @@ namespace Rfid
         {
             string selectedBinCode = binCodeDropdown.captionText.text;
             BinTag tag = rfidReader.DetectedBinTag;
-            if (tag.BinCode != string.Empty)
+            if (!tag)
             {
-                Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
-            }
+                popup.SetActive(true);
+                binTagPopup.SetActive(true);
+                binTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            } 
             else
             {
-                Debug.Log($"Tag belum digunakan, mendaftarkan untuk bin: {tag.BinCode}");
-                tag.BinCode = selectedBinCode;
-                try
+                if (tag.BinCode != string.Empty)
                 {
-                    await SaveTag(tag, selectedBinCode);
-                    StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                    Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
                 }
-                catch
+                else
                 {
-                    Debug.LogError("Gagal menyimpan tag ke Firebase atau memperbarui sistem perusahaan.");
+                    Debug.Log($"Tag belum digunakan, mendaftarkan untuk bin: {tag.BinCode}");
+                    tag.BinCode = selectedBinCode;
+                    try
+                    {
+                        await SaveTag(tag, selectedBinCode);
+                        StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                    }
+                    catch
+                    {
+                        Debug.LogError("Gagal menyimpan tag ke Firebase atau memperbarui sistem perusahaan.");
+                    }
                 }
             }
         }
