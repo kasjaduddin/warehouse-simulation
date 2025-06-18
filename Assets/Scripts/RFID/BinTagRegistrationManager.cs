@@ -120,7 +120,12 @@ namespace Rfid
             {
                 if (tag.BinCode != string.Empty)
                 {
-                    Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+
+                    Transform informationPopup = binTagPopup.transform.Find("Tag Registered");
+                    informationPopup.gameObject.SetActive(true);
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to {tag.BinCode}. Remove tag data?";
                 }
                 else
                 {
@@ -152,7 +157,6 @@ namespace Rfid
             {
                 if (message.Contains("successfully"))
                 {
-                    Debug.Log($"Tag {tag.Id} untuk Bin {binCode} berhasil ditambahkan ke Firebase.");
                     StartCoroutine(UpdateDataOnCompanySystem(binCode));
                 }
                 else
@@ -208,7 +212,9 @@ namespace Rfid
 
                         Transform informationPopup = binTagPopup.transform.Find("Success Write Tag");
                         informationPopup.gameObject.SetActive(true);
-                        informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text += binCode;
+                        informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Successfully registered tag to Bin {binCode}";
+
+                        tags.text = (int.Parse(tags.text) + 1).ToString();
                     }
                     else
                     {
