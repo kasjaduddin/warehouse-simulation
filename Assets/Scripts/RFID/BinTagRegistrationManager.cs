@@ -90,14 +90,19 @@ namespace Rfid
             {
                 if (tag.BinCode != string.Empty)
                 {
-                    Debug.Log($"Tag sudah digunakan untuk bin: {tag.BinCode}");
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+
+                    Transform informationPopup = binTagPopup.transform.Find("Tag Information");
+                    informationPopup.gameObject.SetActive(true);
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text += tag.BinCode;
                 }
                 else
                 {
                     Debug.Log($"Tag belum digunakan");
-                    //tag.BinCode = selectedBinCode;
-                    //await SaveTag(tag, selectedBinCode);
-                    //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));
+                    //tag.BinCode = selectedBinCode;  
+                    //await SaveTag(tag, selectedBinCode);  
+                    //StartCoroutine(UpdateDataOnCompanySystem(selectedBinCode));  
                 }
             }
         }
