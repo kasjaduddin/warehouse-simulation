@@ -1,22 +1,23 @@
 using UnityEngine;
 using System.Threading.Tasks;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 namespace Rfid
 {
-    public class BinTag : MonoBehaviour
+    public class ItemTag : MonoBehaviour
     {
         private int id;
-        private string binCode;
+        private string sku;
 
         public int Id
         {
             get { return id; }
         }
 
-        public string BinCode
+        public string Sku
         {
-            get { return binCode; }
-            set { binCode = value; }
+            get { return sku; }
+            set { sku = value; }
         }
 
         void Start()
@@ -27,7 +28,7 @@ namespace Rfid
         private async void StartAsync()
         {
             await GetTagId();
-            GetBinCode();
+            GetSku();
         }
 
         private async Task GetTagId()
@@ -35,7 +36,7 @@ namespace Rfid
             await Task.Yield();
 
             int parsedNumber;
-            if (int.TryParse(gameObject.name.Substring(4), out parsedNumber))
+            if (int.TryParse(gameObject.name.Substring(13), out parsedNumber))
             {
                 id = parsedNumber;
             }
@@ -46,10 +47,10 @@ namespace Rfid
             }
         }
 
-        private void GetBinCode()
+        private void GetSku()
         {
-            binCode = string.Empty;
-            StartCoroutine(FirebaseServices.ReadData("rfid/bin_tags", data =>
+            sku = string.Empty;
+            StartCoroutine(FirebaseServices.ReadData("rfid/item_tags", data =>
             {
                 if (data != null)
                 {
@@ -57,15 +58,16 @@ namespace Rfid
                     {
                         if (tag["id"].ToString() == id.ToString())
                         {
-                            binCode = tag["bin_code"].ToString();
+                            sku = tag["sku"].ToString();
                         }
                     }
                 }
                 else
                 {
-                    Debug.Log("No bin tag found");
+                    Debug.Log("No item tag found");
                 }
             }));
         }
     }
 }
+
