@@ -18,6 +18,9 @@ namespace Rfid
         private TextMeshProUGUI description;
         private TextMeshProUGUI tags;
 
+        private string selectedBinCode;
+        private BinTag tag;
+
         private void OnEnable()
         {
             binCodeDropdown = transform.Find("Bin Code Dropdown").GetComponent<TMP_Dropdown>();
@@ -78,8 +81,8 @@ namespace Rfid
 
         public void ReadTag()
         {
-            string selectedBinCode = binCodeDropdown.captionText.text;
-            BinTag tag = rfidReader.DetectedBinTag;
+            selectedBinCode = binCodeDropdown.captionText.text;
+            tag = rfidReader.DetectedBinTag;
             if (!tag)
             {
                 popup.SetActive(true);
@@ -108,8 +111,8 @@ namespace Rfid
 
         public async void WriteTag()
         {
-            string selectedBinCode = binCodeDropdown.captionText.text;
-            BinTag tag = rfidReader.DetectedBinTag;
+            selectedBinCode = binCodeDropdown.captionText.text;
+            tag = rfidReader.DetectedBinTag;
             if (!tag)
             {
                 popup.SetActive(true);
@@ -129,7 +132,6 @@ namespace Rfid
                 }
                 else
                 {
-                    tag.BinCode = selectedBinCode;
                     try
                     {
                         await SaveTag(tag, selectedBinCode);
@@ -140,6 +142,40 @@ namespace Rfid
                         binTagPopup.SetActive(true);
                         binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
                     }
+                }
+            }
+        }
+
+        public async void RemoveTag()
+        {
+            selectedBinCode = binCodeDropdown.captionText.text;
+            tag = rfidReader.DetectedBinTag;
+            if (!tag)
+            {
+                popup.SetActive(true);
+                binTagPopup.SetActive(true);
+                binTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            }
+            else
+            {
+                if (tag.BinCode != string.Empty)
+                {
+                    try
+                    {
+                        await DeleteTag(tag, selectedBinCode);
+                    }
+                    catch
+                    {
+                        popup.SetActive(true);
+                        binTagPopup.SetActive(true);
+                        binTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+                    binTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
                 }
             }
         }
@@ -157,7 +193,7 @@ namespace Rfid
             {
                 if (message.Contains("successfully"))
                 {
-                    StartCoroutine(UpdateDataOnCompanySystem(binCode));
+                    StartCoroutine(UpdateDataOnCompanySystem(binCode, true));
                 }
                 else
                 {
@@ -168,7 +204,26 @@ namespace Rfid
             }));
         }
 
-        private IEnumerator UpdateDataOnCompanySystem(string binCode)
+        private async Task DeleteTag(BinTag tag, string binCode)
+        {
+            await Task.Yield();
+
+            StartCoroutine(FirebaseServices.DeleteData("rfid/bin_tags", "id", tag.Id, message =>
+            {
+                if (message.Contains("successfully"))
+                {
+                    StartCoroutine(UpdateDataOnCompanySystem(binCode, false));
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    binTagPopup.SetActive(true);
+                    binTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                }
+            }));
+        }
+
+        private IEnumerator UpdateDataOnCompanySystem(string binCode, bool addTag)
         {
             int currentTags = -1;
             bool? successReadData = null;
@@ -190,7 +245,16 @@ namespace Rfid
                 {
                     popup.SetActive(true);
                     binTagPopup.SetActive(true);
-                    binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+
+                    if (addTag)
+                    {
+                        binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        binTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+
                     successReadData = false;
                 }
             }));
@@ -198,7 +262,7 @@ namespace Rfid
             yield return new WaitUntil(() => successReadData != null);
             if (successReadData == true)
             {
-                int newTagCount = currentTags + 1;
+                int newTagCount = addTag ? currentTags + 1 : currentTags - 1;
                 var binData = new Dictionary<string, object>
                 {
                     { "number_of_tags", newTagCount }
@@ -210,17 +274,41 @@ namespace Rfid
                         popup.SetActive(true);
                         binTagPopup.SetActive(true);
 
-                        Transform informationPopup = binTagPopup.transform.Find("Success Write Tag");
-                        informationPopup.gameObject.SetActive(true);
-                        informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Successfully registered tag to Bin {binCode}";
+                        if (addTag)
+                        {
+                            tag.BinCode = selectedBinCode;
+                            Transform informationPopup = binTagPopup.transform.Find("Success Write Tag");
+                            informationPopup.gameObject.SetActive(true);
+                            informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Successfully registered tag to Bin {binCode}";
 
-                        tags.text = (int.Parse(tags.text) + 1).ToString();
+                            tags.text = (int.Parse(tags.text) + 1).ToString();
+                        }
+                        else
+                        {
+                            tag.BinCode = string.Empty;
+
+                            Transform registeredPopup = binTagPopup.transform.Find("Tag Registered");
+                            registeredPopup.gameObject.SetActive(false);
+
+                            Transform informationPopup = binTagPopup.transform.Find("Success Remove Tag Data");
+                            informationPopup.gameObject.SetActive(true);
+
+                            tags.text = (int.Parse(tags.text) - 1).ToString();
+                        }
                     }
                     else
                     {
                         popup.SetActive(true);
                         binTagPopup.SetActive(true);
-                        binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+
+                        if (addTag)
+                        {
+                            binTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                        }
+                        else
+                        {
+                            binTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                        }
                     }
                 }));
             }

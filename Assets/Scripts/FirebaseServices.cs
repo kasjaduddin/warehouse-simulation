@@ -699,6 +699,52 @@ public class FirebaseServices : MonoBehaviour
         }
     }
 
+    public static IEnumerator DeleteData(string collectionName, string primaryKey, int key, System.Action<string> callback = null)
+    {
+        string message = null;
+
+        // Mencari data dengan primaryKey dan key yang sesuai
+        var checkTask = reference.Child(collectionName).OrderByChild(primaryKey).EqualTo(key).GetValueAsync();
+        yield return new WaitUntil(() => checkTask.IsCompleted);
+
+        if (checkTask.Exception != null)
+        {
+            message = $"Error checking for {primaryKey} {key}: {checkTask.Exception}";
+            Debug.LogError(message);
+            callback?.Invoke(message);
+            yield break;
+        }
+
+        DataSnapshot snapshot = checkTask.Result;
+        if (snapshot.Exists)
+        {
+            // Menghapus data yang ditemukan
+            foreach (DataSnapshot child in snapshot.Children)
+            {
+                string documentId = child.Key;
+                var deleteTask = reference.Child(collectionName).Child(documentId).RemoveValueAsync();
+                yield return new WaitUntil(() => deleteTask.IsCompleted);
+
+                if (deleteTask.Exception != null)
+                {
+                    message = $"Failed to delete data with {primaryKey} {key} in {collectionName} collection: {deleteTask.Exception}";
+                    Debug.LogError(message);
+                    callback?.Invoke(message);
+                    yield break;
+                }
+            }
+            message = $"Data with {primaryKey} {key} successfully deleted in {collectionName} collection.";
+            Debug.Log(message);
+            callback?.Invoke(message);
+        }
+        else
+        {
+            message = $"No data found with {primaryKey} {key} in {collectionName} collection.";
+            Debug.LogWarning(message);
+            callback?.Invoke(message);
+        }
+    }
+
     public static IEnumerator DeleteData(string collectionName, string documentPrimaryKey, string documentKey, string listName, string itemPrimaryKey, string itemKey, System.Action<string> callback = null)
     {
         // Search documents by documentPrimaryKey and documentKey
