@@ -1,5 +1,6 @@
 using CompanySystem;
 using Record;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,13 +10,20 @@ namespace Rfid
 {
     public class ItemTagRegistrationManager : MonoBehaviour
     {
+        [SerializeField]
+        private ReaderManager rfidReader;
+        [SerializeField]
+        private GameObject popup;
+        private GameObject itemTagPopup;
+
         private TMP_Dropdown transactionCodeDropdown;
 
         private GameObject table;
-        private Transform container; // Container to hold the instantiated records
-        private GameObject recordTemplate; // Template for displaying each record
+        private Transform container;
+        private GameObject recordTemplate;
         private TransactionRecord transactionRecord;
 
+        private ItemTag tag;
         private void OnEnable()
         {
             transactionCodeDropdown = transform.Find("Transaction Code Dropdown").GetComponent<TMP_Dropdown>();
@@ -23,6 +31,8 @@ namespace Rfid
             container = table.transform.Find("Table Container");
             recordTemplate = container.Find("Record Template").gameObject;
             Invoke("GetTransactionCodes", 0.1f);
+
+            itemTagPopup = popup.transform.Find("Item Tag").gameObject;
         }
 
         private void OnDisable()
@@ -67,6 +77,35 @@ namespace Rfid
                     Debug.LogError("Failed to retrieve data.");
                 }
             }));
+        }
+
+        public void ReadTag()
+        {
+            tag = rfidReader.DetectedItemTag;
+            if (!tag)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            }
+            else
+            {
+                if (tag.Sku != string.Empty)
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+
+                    Transform informationPopup = itemTagPopup.transform.Find("Tag Information");
+                    informationPopup.gameObject.SetActive(true);
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to Bin {tag.Sku}";
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
+                }
+            }
         }
 
         public void SelectItem(TextMeshProUGUI sku)

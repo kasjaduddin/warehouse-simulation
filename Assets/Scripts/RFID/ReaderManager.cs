@@ -5,20 +5,16 @@ namespace Rfid
     public class ReaderManager : MonoBehaviour
     {
         private BinTag detectedBinTag;
+        private ItemTag detectedItemTag;
 
         public BinTag DetectedBinTag
         {
             get { return detectedBinTag; }
         }
 
-        void Start()
+        public ItemTag DetectedItemTag
         {
-
-        }
-
-        void Update()
-        {
-
+            get { return detectedItemTag; }
         }
 
         private void OnTriggerEnter(Collider other)
@@ -26,6 +22,11 @@ namespace Rfid
             if (other.CompareTag("BinTag"))
             {
                 detectedBinTag = other.GetComponent<BinTag>();
+            }
+            
+            if (other.CompareTag("ItemTag"))
+            {
+                detectedItemTag = other.GetComponent<ItemTag>();
             }
         }
     }
