@@ -81,7 +81,6 @@ namespace Rfid
 
         public void ReadTag()
         {
-            selectedBinCode = binCodeDropdown.captionText.text;
             tag = rfidReader.DetectedBinTag;
             if (!tag)
             {
@@ -148,7 +147,6 @@ namespace Rfid
 
         public async void RemoveTag()
         {
-            selectedBinCode = binCodeDropdown.captionText.text;
             tag = rfidReader.DetectedBinTag;
             if (!tag)
             {
@@ -162,7 +160,7 @@ namespace Rfid
                 {
                     try
                     {
-                        await DeleteTag(tag, selectedBinCode);
+                        await DeleteTag(tag, tag.BinCode);
                     }
                     catch
                     {
@@ -293,7 +291,10 @@ namespace Rfid
                             Transform informationPopup = binTagPopup.transform.Find("Success Remove Tag Data");
                             informationPopup.gameObject.SetActive(true);
 
-                            tags.text = (int.Parse(tags.text) - 1).ToString();
+                            if (binCodeDropdown.captionText.text == binCode)
+                            {
+                                tags.text = (int.Parse(tags.text) - 1).ToString();
+                            }
                         }
                     }
                     else
