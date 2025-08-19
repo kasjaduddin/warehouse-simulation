@@ -160,6 +160,39 @@ namespace Rfid
             }
         }
 
+        public async void RemoveTag()
+        {
+            tag = rfidReader.DetectedItemTag;
+            if (!tag)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            }
+            else
+            {
+                if (tag.Sku != string.Empty)
+                {
+                    try
+                    {
+                        await DeleteTag(tag, tag.TransactionCode, tag.Sku);
+                    }
+                    catch
+                    {
+                        popup.SetActive(true);
+                        itemTagPopup.SetActive(true);
+                        itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
+                }
+            }
+        }
+
         private async Task SaveTag(ItemTag tag, string transactionCode, string sku)
         {
             await Task.Yield();
@@ -167,7 +200,8 @@ namespace Rfid
             var tagData = new Dictionary<string, object>
             {
                 { "id", tag.Id },
-                { "sku", sku }
+                { "sku", sku },
+                { "transaction_code", transactionCode }
             };
             StartCoroutine(FirebaseServices.WriteData("rfid/item_tags", tagData, message =>
             {
@@ -180,6 +214,25 @@ namespace Rfid
                     popup.SetActive(true);
                     itemTagPopup.SetActive(true);
                     itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                }
+            }));
+        }
+
+        private async Task DeleteTag(ItemTag tag, string transactionCode, string sku)
+        {
+            await Task.Yield();
+
+            StartCoroutine(FirebaseServices.DeleteData("rfid/item_tags", "id", tag.Id, message =>
+            {
+                if (message.Contains("successfully"))
+                {
+                    StartCoroutine(UpdateDataOnCompanySystem(transactionCode, sku, false));
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
                 }
             }));
         }
@@ -220,6 +273,7 @@ namespace Rfid
             if (successReadData == true)
             {
                 int newTagCount = addTag ? currentTags + 1 : currentTags - 1;
+                bool newTagged = addTag;
                 var itemData = new Dictionary<string, object>
                 {
                     { "number_of_tags", newTagCount }
@@ -227,7 +281,7 @@ namespace Rfid
                 var transactionData = new Dictionary<string, object>
                 {
                     { "sku", sku },
-                    { "tagged", true }
+                    { "tagged", newTagged }
                 };
 
                 yield return StartCoroutine(FirebaseServices.ModifyData("items", itemData, sku, "sku", message =>
@@ -239,6 +293,7 @@ namespace Rfid
                     else
                     {
                         successModifyItemData = false;
+                        Debug.LogError("Failed to modify item data: " + message);
                     }
                 }));
 
@@ -252,6 +307,7 @@ namespace Rfid
                     else
                     {
                         successModifyTransactionData = false;
+                        Debug.LogError("Failed to modify transaction data: " + message);
                     }
                 }));
 
@@ -264,6 +320,7 @@ namespace Rfid
                     if (addTag)
                     {
                         tag.Sku = selectedSku;
+                        tag.TransactionCode = selectedTransactionCode;
 
                         Transform informationPopup = itemTagPopup.transform.Find("Success Write Tag");
                         informationPopup.gameObject.SetActive(true);

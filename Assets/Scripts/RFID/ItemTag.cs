@@ -8,6 +8,7 @@ namespace Rfid
     {
         private int id;
         private string sku;
+        private string transactionCode;
 
         public int Id
         {
@@ -18,6 +19,12 @@ namespace Rfid
         {
             get { return sku; }
             set { sku = value; }
+        }
+
+        public string TransactionCode
+        {
+            get { return transactionCode; }
+            set { transactionCode = value; }
         }
 
         void Start()
@@ -59,6 +66,28 @@ namespace Rfid
                         if (tag["id"].ToString() == id.ToString())
                         {
                             sku = tag["sku"].ToString();
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.Log("No item tag found");
+                }
+            }));
+        }
+
+        public void SetTransactionCode(string code)
+        {
+            transactionCode = string.Empty;
+            StartCoroutine(FirebaseServices.ReadData("rfid/item_tags", data =>
+            {
+                if (data != null)
+                {
+                    foreach (var tag in data)
+                    {
+                        if (tag["id"].ToString() == id.ToString())
+                        {
+                            transactionCode = tag["transaction_code"].ToString();
                         }
                     }
                 }
