@@ -1,6 +1,8 @@
 using CompanySystem;
 using Record;
-using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +25,10 @@ namespace Rfid
         private GameObject recordTemplate;
         private TransactionRecord transactionRecord;
 
+        private TextMeshProUGUI tags;
+
+        private string selectedTransactionCode;
+        private string selectedSku;
         private ItemTag tag;
         private void OnEnable()
         {
@@ -30,6 +36,7 @@ namespace Rfid
             table = transform.Find("Item List").gameObject;
             container = table.transform.Find("Table Container");
             recordTemplate = container.Find("Record Template").gameObject;
+            tags = transform.Find("Item Information").Find("Tags").GetComponent<TextMeshProUGUI>();
             Invoke("GetTransactionCodes", 0.1f);
 
             itemTagPopup = popup.transform.Find("Item Tag").gameObject;
@@ -97,7 +104,7 @@ namespace Rfid
 
                     Transform informationPopup = itemTagPopup.transform.Find("Tag Information");
                     informationPopup.gameObject.SetActive(true);
-                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to Bin {tag.Sku}";
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to Item {tag.Sku}";
                 }
                 else
                 {
@@ -105,6 +112,197 @@ namespace Rfid
                     itemTagPopup.SetActive(true);
                     itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
                 }
+            }
+        }
+
+        public async void WriteTag()
+        {
+            selectedTransactionCode = transactionCodeDropdown.captionText.text;
+            selectedSku = transform.Find("Item Information").Find("SKU").GetComponent<TextMeshProUGUI>().text;
+            if (selectedSku == string.Empty)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("No Item Selected").gameObject.SetActive(true);
+                return;
+            }
+
+            tag = rfidReader.DetectedItemTag;
+            if (!tag)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            }
+            else
+            {
+                if (tag.Sku != string.Empty)
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    Transform informationPopup = itemTagPopup.transform.Find("Tag Registered");
+                    informationPopup.gameObject.SetActive(true);
+                    informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Tag has been registered to Item {tag.Sku}. Remove tag data?";
+                }
+                else
+                {
+                    try
+                    {
+                        await SaveTag(tag, selectedTransactionCode, selectedSku);
+                    }
+                    catch
+                    {
+                        popup.SetActive(true);
+                        itemTagPopup.SetActive(true);
+                        itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        private async Task SaveTag(ItemTag tag, string transactionCode, string sku)
+        {
+            await Task.Yield();
+
+            var tagData = new Dictionary<string, object>
+            {
+                { "id", tag.Id },
+                { "sku", sku }
+            };
+            StartCoroutine(FirebaseServices.WriteData("rfid/item_tags", tagData, message =>
+            {
+                if (message.Contains("successfully"))
+                {
+                    StartCoroutine(UpdateDataOnCompanySystem(transactionCode, sku, true));
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                }
+            }));
+        }
+
+        private IEnumerator UpdateDataOnCompanySystem(string transactionCode, string sku, bool addTag)
+        {
+            int currentTags = -1;
+            bool? successReadData = null;
+            bool? successModifyItemData = null;
+            bool? successModifyTransactionData = null;
+
+            yield return FirebaseServices.ReadData("items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    currentTags = int.Parse(data["number_of_tags"].ToString());
+                    successReadData = true;
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+
+                    if (addTag)
+                    {
+                        itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+
+                    successReadData = false;
+                }
+            });
+
+            yield return new WaitUntil(() => successReadData != null);
+            if (successReadData == true)
+            {
+                int newTagCount = addTag ? currentTags + 1 : currentTags - 1;
+                var itemData = new Dictionary<string, object>
+                {
+                    { "number_of_tags", newTagCount }
+                };
+                var transactionData = new Dictionary<string, object>
+                {
+                    { "sku", sku },
+                    { "tagged", true }
+                };
+
+                yield return StartCoroutine(FirebaseServices.ModifyData("items", itemData, sku, "sku", message =>
+                {
+                    if (message.Contains("successfully"))
+                    {
+                        successModifyItemData = true;
+                    }
+                    else
+                    {
+                        successModifyItemData = false;
+                    }
+                }));
+
+                yield return StartCoroutine(FirebaseServices.ModifyData("transactions", "code", transactionCode, "items", transactionData, sku, "sku", message =>
+                {
+
+                    if (message.Contains("successfully"))
+                    {
+                        successModifyTransactionData = true;
+                    }
+                    else
+                    {
+                        successModifyTransactionData = false;
+                    }
+                }));
+
+                yield return new WaitUntil(() => successModifyItemData.HasValue && successModifyTransactionData.HasValue);
+                if (successModifyItemData.Value && successModifyTransactionData.Value)
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+
+                    if (addTag)
+                    {
+                        tag.Sku = selectedSku;
+
+                        Transform informationPopup = itemTagPopup.transform.Find("Success Write Tag");
+                        informationPopup.gameObject.SetActive(true);
+                        informationPopup.Find("Text").GetComponent<TextMeshProUGUI>().text = $"Successfully registered tag to Item {sku}";
+
+                        tags.text = (int.Parse(tags.text) + 1).ToString();
+                        LoadTransactionData();
+                    }
+                    else
+                    {
+                        tag.Sku = string.Empty;
+
+                        Transform registeredPopup = itemTagPopup.transform.Find("Tag Registered");
+                        registeredPopup.gameObject.SetActive(false);
+
+                        Transform informationPopup = itemTagPopup.transform.Find("Success Remove Tag Data");
+                        informationPopup.gameObject.SetActive(true);
+
+                        if (transactionCodeDropdown.captionText.text == transactionCode && selectedSku == sku)
+                        {
+                            tags.text = (int.Parse(tags.text) - 1).ToString();
+                        }
+                    }
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+
+                    if (addTag)
+                    {
+                        itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+                }
+
             }
         }
 
