@@ -59,6 +59,7 @@ namespace Rfid
         {
             DestroyReservationRecord();
             DestroyItemRecord();
+            ClearTagInformation();
         }
 
         private void Update()
@@ -103,10 +104,7 @@ namespace Rfid
         public void StopChecking()
         {
             checking = false;
-            tagInformation.transform.Find("Bin Code").GetComponent<TextMeshProUGUI>().text = string.Empty;
-            tagInformation.transform.Find("SKU").GetComponent<TextMeshProUGUI>().text = string.Empty;
-            tagInformation.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = string.Empty;
-            tagInformation.transform.Find("Quantity").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            ClearTagInformation();
         }
 
         private IEnumerator CheckingTag()
@@ -114,9 +112,7 @@ namespace Rfid
             tag = rfidReader.DetectedItemTag;
             if (!tag)
             {
-                popup.SetActive(true);
-                itemTagPopup.SetActive(true);
-                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+                ClearTagInformation();
             }
             else
             {
@@ -188,6 +184,14 @@ namespace Rfid
                 SetTextIfChanged(tagInformation.transform, "Name", string.Empty);
                 SetTextIfChanged(tagInformation.transform, "Quantity", string.Empty);
             }
+        }
+
+        private void ClearTagInformation()
+        {
+            tagInformation.transform.Find("Bin Code").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("SKU").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("Quantity").GetComponent<TextMeshProUGUI>().text = string.Empty;
         }
 
         private void SetTextIfChanged(Transform parent, string childName, string newValue)
