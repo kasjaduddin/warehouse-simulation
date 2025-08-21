@@ -2,13 +2,11 @@ using CompanySystem;
 using Newtonsoft.Json.Linq;
 using Record;
 using System.Collections;
-using System.ComponentModel;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering.LookDev;
 using UnityEngine.UI;
-using static Record.ReservationRecord;
-using static UnityEngine.Rendering.DebugUI;
 
 namespace Rfid
 {
@@ -19,10 +17,12 @@ namespace Rfid
         [SerializeField]
         private GameObject popup;
         private GameObject itemTagPopup;
+        private TextMeshProUGUI selectedReservation;
 
         bool checking = false; // Flag to indicate if the system is currently checking for tags
         bool isCheckingInProgress = false; // Flag to prevent multiple checks from being initiated simultaneously
         bool packing = false; // Flag to indicate if the system is currently packing items
+        bool isPackingInProgress = false; // Flag to prevent multiple packing operations from being initiated simultaneously
 
         private JArray reservations; // Array to store reservations data
         private GameObject reservationTable;
@@ -37,6 +37,10 @@ namespace Rfid
         private GameObject tagInformation;
 
         private new ItemTag tag;
+
+        private string pendingTransactionCode;
+        private string pendingSku;
+        private int pendingTransactionQty;
 
         private void OnEnable()
         {
@@ -69,6 +73,12 @@ namespace Rfid
                 isCheckingInProgress = true;
                 StartCoroutine(CheckingTag());
             }
+
+            if (packing && !isPackingInProgress)
+            {
+                isPackingInProgress = true;
+                StartCoroutine(PackingItem());
+            }
         }
 
         public void LoadReservationData()
@@ -91,8 +101,20 @@ namespace Rfid
         public void SelectReservation(TextMeshProUGUI code)
         {
             UnselectRecord();
+            selectedReservation = code;
             code.transform.parent.GetComponent<Image>().color = new Color32(4, 83, 221, 255);
             StartCoroutine(GetItems(code.text));
+        }
+
+        public void StartPacking()
+        {
+            packing = true;
+            isPackingInProgress = false;
+        }
+
+        public void StopPacking()
+        {
+            packing = false;
         }
 
         public void StartChecking()
@@ -106,6 +128,200 @@ namespace Rfid
             checking = false;
             ClearTagInformation();
         }
+
+        private IEnumerator PackingItem()
+        {
+            tag = rfidReader.DetectedItemTag;
+
+            if (tag == null)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+                isPackingInProgress = false;
+                yield break;
+            }
+
+            if (string.IsNullOrEmpty(tag.Sku))
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
+                isPackingInProgress = false;
+                yield break;
+            }
+
+            yield return CheckItemAvailability(tag.TransactionCode, tag.Sku);
+            isPackingInProgress = false;
+        }
+
+        private IEnumerator CheckItemAvailability(string transactionCode, string sku)
+        {
+            int transactionQty = -1;
+            int itemQty = -1;
+            bool? successTransaction = null;
+            bool? successItem = null;
+
+            yield return StartCoroutine(FirebaseServices.ReadData("transactions", "code", transactionCode, "items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    transactionQty = int.Parse(data["quantity"].ToString());
+                    successTransaction = true;
+                }
+                else
+                {
+                    successTransaction = false;
+                }
+            }));
+
+            yield return StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    itemQty = int.Parse(data["quantity"].ToString());
+                    successItem = true;
+                }
+                else
+                {
+                    successItem = false;
+                }
+            }));
+
+            yield return new WaitUntil(() => successTransaction.HasValue && successItem.HasValue);
+
+            if (successTransaction.Value && successItem.Value && itemQty >= transactionQty)
+            {
+                pendingTransactionCode = transactionCode;
+                pendingSku = sku;
+                pendingTransactionQty = transactionQty;
+
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                Transform readyPopup = itemTagPopup.transform.Find("Ready for Packing");
+                readyPopup.gameObject.SetActive(true);
+
+                TextMeshProUGUI confirmationText = readyPopup.Find("Text").GetComponent<TextMeshProUGUI>();
+                confirmationText.text = $"Are you sure you want to picking item {sku}?";
+
+                Button yesButton = readyPopup.Find("Buttons/Yes Button").GetComponent<Button>();
+                yesButton.onClick.RemoveAllListeners();
+                yesButton.onClick.AddListener(OnConfirmPacking);
+            }
+            else
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Insufficient Quantity").gameObject.SetActive(true);
+            }
+        }
+
+        private void OnConfirmPacking()
+        {
+            StartCoroutine(PackingItem(pendingTransactionCode, pendingSku, pendingTransactionQty));
+
+            Transform readyPopup = itemTagPopup.transform.Find("Ready for Packing");
+            readyPopup.gameObject.SetActive(false);
+        }
+
+        private IEnumerator PackingItem(string transactionCode, string sku, int transactionQty)
+        {
+            bool? successItemUpdate = null;
+            bool? successTransactionUpdate = null;
+            bool? successReservationUpdate = null;
+            bool? successTagDelete = null;
+
+            // 1. Update quantity di items
+            yield return StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    int currentQty = int.Parse(data["quantity"].ToString());
+                    int newQty = currentQty - transactionQty;
+
+                    var updatedData = new Dictionary<string, object>
+                    {
+                        { "quantity", newQty },
+                        { "sku", sku }
+                    };
+
+                    StartCoroutine(FirebaseServices.ModifyData("items", updatedData, sku, "sku", msg =>
+                    {
+                        successItemUpdate = msg.Contains("successfully");
+                    }));
+                }
+                else
+                {
+                    successItemUpdate = false;
+                }
+            }));
+
+            // 2. Tandai item di transaksi sebagai packed
+            var packedData = new Dictionary<string, object>
+            {
+                { "information", "packed" },
+                { "sku", sku }
+            };
+            yield return StartCoroutine(FirebaseServices.ModifyData("transactions", "code", transactionCode, "items", packedData, sku, "sku", msg =>
+            {
+                successTransactionUpdate = msg.Contains("successfully");
+            }));
+
+            // 3. Update quantity dan packed status di reservation
+            yield return StartCoroutine(FirebaseServices.ReadData("reservations", "code", selectedReservation.text, "items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    int currentQty = int.Parse(data["quantity"].ToString());
+                    int newQty = currentQty - transactionQty;
+
+                    var updatedData = new Dictionary<string, object>
+                    {
+                        { "quantity", newQty },
+                        { "sku", sku }
+                    };
+
+                    if (newQty == 0)
+                    {
+                        updatedData.Add("packed", true);
+                    }
+
+                    StartCoroutine(FirebaseServices.ModifyData("reservations", "code", selectedReservation.text, "items", updatedData, sku, "sku", msg =>
+                    {
+                        successReservationUpdate = msg.Contains("successfully");
+                    }));
+                }
+                else
+                {
+                    successReservationUpdate = false;
+                }
+            }));
+
+            yield return StartCoroutine(FirebaseServices.DeleteData("rfid/item_tags", "id", tag.Id, msg =>
+            {
+                successTagDelete = msg.Contains("successfully");
+            }));
+
+            // 5. Tunggu semua operasi selesai
+            yield return new WaitUntil(() =>
+                successItemUpdate.HasValue &&
+                successTransactionUpdate.HasValue &&
+                successReservationUpdate.HasValue &&
+                successTagDelete.HasValue
+            );
+
+            if (successItemUpdate.Value && successTransactionUpdate.Value && successReservationUpdate.Value && successTagDelete.Value)
+            {
+                StartCoroutine(GetItems(selectedReservation.text));
+            }
+            else
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Error Packing Item").gameObject.SetActive(true);
+            }
+        }
+
 
         private IEnumerator CheckingTag()
         {
@@ -234,7 +450,6 @@ namespace Rfid
                     Transform newRowTransform = newRow.transform;
                     RectTransform entryRectTransform = newRow.GetComponent<RectTransform>();
 
-                    // Fill the UI elements with data
                     entryRectTransform.anchoredPosition = new Vector2(0f, 46f + (-templateHigh * i));
                     newRowTransform.Find("Button").Find("Code").GetComponent<TextMeshProUGUI>().text = reservations[i]["code"].ToString();
 
@@ -316,7 +531,6 @@ namespace Rfid
                     Transform newRowTransform = newRow.transform;
                     RectTransform entryRectTransform = newRow.GetComponent<RectTransform>();
 
-                    // Fill the UI elements with data
                     entryRectTransform.anchoredPosition = new Vector2(0f, 46f + (-templateHigh * i));
                     newRowTransform.Find("No").GetComponent<TextMeshProUGUI>().text = (i + 1).ToString();
                     newRowTransform.Find("Bin Code").GetComponent<TextMeshProUGUI>().text = item.BinCode;

@@ -80,7 +80,7 @@ namespace CompanySystem
                 newRowTransform.Find("Quantity").GetComponent<TextMeshProUGUI>().text = item.Quantity.ToString();
                 newRowTransform.Find("Information").GetComponent<TextMeshProUGUI>().text = item.Information;
 
-                if (TransactionListManager.selectedRecord.Items[i].Information.Equals("approved"))
+                if (TransactionListManager.selectedRecord.Items[i].Information.Equals("approved") || TransactionListManager.selectedRecord.Items[i].Information.Equals("packed"))
                 {
                     newRowTransform.Find("Record Background").GetComponent<Image>().color = new Color32(22, 196, 127, 255);
                     newRowTransform.Find("Buttons").gameObject.SetActive(false);
