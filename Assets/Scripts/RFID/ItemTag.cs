@@ -36,6 +36,7 @@ namespace Rfid
         {
             await GetTagId();
             GetSku();
+            SetTransactionCode();
         }
 
         private async Task GetTagId()
@@ -54,8 +55,10 @@ namespace Rfid
             }
         }
 
-        private void GetSku()
+        private async void GetSku()
         {
+            await Task.Yield();
+
             sku = string.Empty;
             StartCoroutine(FirebaseServices.ReadData("rfid/item_tags", data =>
             {
@@ -76,8 +79,10 @@ namespace Rfid
             }));
         }
 
-        public void SetTransactionCode(string code)
+        public async void SetTransactionCode()
         {
+            await Task.Yield();
+
             transactionCode = string.Empty;
             StartCoroutine(FirebaseServices.ReadData("rfid/item_tags", data =>
             {

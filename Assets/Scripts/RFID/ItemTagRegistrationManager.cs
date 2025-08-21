@@ -29,7 +29,8 @@ namespace Rfid
 
         private string selectedTransactionCode;
         private string selectedSku;
-        private ItemTag tag;
+        private new ItemTag tag;
+
         private void OnEnable()
         {
             transactionCodeDropdown = transform.Find("Transaction Code Dropdown").GetComponent<TMP_Dropdown>();

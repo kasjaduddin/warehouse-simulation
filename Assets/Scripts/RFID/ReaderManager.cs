@@ -29,5 +29,18 @@ namespace Rfid
                 detectedItemTag = other.GetComponent<ItemTag>();
             }
         }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.CompareTag("BinTag"))
+            {
+                detectedBinTag = null;
+            }
+
+            if (other.CompareTag("ItemTag"))
+            {
+                detectedItemTag = null;
+            }
+        }
     }
 }

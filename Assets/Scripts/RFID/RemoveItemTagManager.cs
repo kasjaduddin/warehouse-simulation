@@ -5,6 +5,7 @@ using System.Collections;
 using System.ComponentModel;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering.LookDev;
 using UnityEngine.UI;
 using static Record.ReservationRecord;
 using static UnityEngine.Rendering.DebugUI;
@@ -13,6 +14,16 @@ namespace Rfid
 {
     public class RemoveItemTagManager : MonoBehaviour
     {
+        [SerializeField]
+        private ReaderManager rfidReader;
+        [SerializeField]
+        private GameObject popup;
+        private GameObject itemTagPopup;
+
+        bool checking = false; // Flag to indicate if the system is currently checking for tags
+        bool isCheckingInProgress = false; // Flag to prevent multiple checks from being initiated simultaneously
+        bool packing = false; // Flag to indicate if the system is currently packing items
+
         private JArray reservations; // Array to store reservations data
         private GameObject reservationTable;
         private Transform reservationContainer; // Container to hold the instantiated records
@@ -22,7 +33,10 @@ namespace Rfid
         private GameObject itemTable;
         private Transform itemContainer; // Container to hold the instantiated records
         private GameObject itemRecordTemplate; // Template for displaying each record
-        //private ReservationRecord itemRecord;
+
+        private GameObject tagInformation;
+
+        private new ItemTag tag;
 
         private void OnEnable()
         {
@@ -34,13 +48,26 @@ namespace Rfid
             itemContainer = itemTable.transform.Find("Table Container");
             itemRecordTemplate = itemContainer.Find("Record Template").gameObject;
 
+            tagInformation = transform.Find("Tag Information").gameObject;
+
             Invoke("LoadReservationData", 0.1f);
+
+            itemTagPopup = popup.transform.Find("Item Tag").gameObject;
         }
 
         private void OnDisable()
         {
             DestroyReservationRecord();
             DestroyItemRecord();
+        }
+
+        private void Update()
+        {
+            if (checking && !isCheckingInProgress)
+            {
+                isCheckingInProgress = true;
+                StartCoroutine(CheckingTag());
+            }
         }
 
         public void LoadReservationData()
@@ -65,6 +92,111 @@ namespace Rfid
             UnselectRecord();
             code.transform.parent.GetComponent<Image>().color = new Color32(4, 83, 221, 255);
             StartCoroutine(GetItems(code.text));
+        }
+
+        public void StartChecking()
+        {
+            checking = true;
+            isCheckingInProgress = false;
+        }
+
+        public void StopChecking()
+        {
+            checking = false;
+            tagInformation.transform.Find("Bin Code").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("SKU").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = string.Empty;
+            tagInformation.transform.Find("Quantity").GetComponent<TextMeshProUGUI>().text = string.Empty;
+        }
+
+        private IEnumerator CheckingTag()
+        {
+            tag = rfidReader.DetectedItemTag;
+            if (!tag)
+            {
+                popup.SetActive(true);
+                itemTagPopup.SetActive(true);
+                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
+            }
+            else
+            {
+                if (tag.Sku != string.Empty)
+                {
+                    yield return StartCoroutine(ShowTagInformation(tag.TransactionCode, tag.Sku));
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+                    itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
+                }
+            }
+
+            isCheckingInProgress = false;
+        }
+
+        private IEnumerator ShowTagInformation(string transactionCode, string sku)
+        {
+            bool? successReadTransaction = null;
+            bool? successReadItem = null;
+
+            string binCode = string.Empty;
+            string itemName = string.Empty;
+            string quantity = string.Empty;
+
+            yield return StartCoroutine(FirebaseServices.ReadData("transactions", "code", transactionCode, "items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    itemName = data["item_name"].ToString();
+                    quantity = data["quantity"].ToString();
+
+                    successReadTransaction = true;
+                }
+                else
+                {
+                    successReadTransaction = false;
+                }
+            }));
+
+            yield return StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
+            {
+                if (data != null)
+                {
+                    binCode = data["bin_code"].ToString();
+
+                    successReadItem = true;
+                }
+                else
+                {
+                    successReadItem = false;
+                }
+            }));
+
+            yield return new WaitUntil(() => successReadTransaction.HasValue && successReadItem.HasValue);
+            if (successReadTransaction.Value && successReadItem.Value)
+            {
+                SetTextIfChanged(tagInformation.transform, "Bin Code", binCode);
+                SetTextIfChanged(tagInformation.transform, "SKU", sku);
+                SetTextIfChanged(tagInformation.transform, "Name", itemName);
+                SetTextIfChanged(tagInformation.transform, "Quantity", quantity);
+            }
+            else
+            {
+                SetTextIfChanged(tagInformation.transform, "Bin Code", string.Empty);
+                SetTextIfChanged(tagInformation.transform, "SKU", string.Empty);
+                SetTextIfChanged(tagInformation.transform, "Name", string.Empty);
+                SetTextIfChanged(tagInformation.transform, "Quantity", string.Empty);
+            }
+        }
+
+        private void SetTextIfChanged(Transform parent, string childName, string newValue)
+        {
+            var textComponent = parent.Find(childName).GetComponent<TextMeshProUGUI>();
+            if (textComponent.text != newValue)
+            {
+                textComponent.text = newValue;
+            }
         }
 
         private IEnumerator ShowReservation()
@@ -117,10 +249,10 @@ namespace Rfid
             {
                 if (item.Information.Equals("approved") && !item.Packed)
                 {
-                    counter++; Debug.Log(item.ItemName);
+                    counter++;
                 }
             }
-            Debug.Log($"{record.Items.Count} {counter} {record.Items.Count > 0 && counter == record.Items.Count}");
+
             if (record.Items.Count > 0 && counter > 0)
             {
                 return true;
