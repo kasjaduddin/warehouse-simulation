@@ -135,23 +135,16 @@ namespace Rfid
 
             if (tag == null)
             {
-                popup.SetActive(true);
-                itemTagPopup.SetActive(true);
-                itemTagPopup.transform.Find("Tag Not Found").gameObject.SetActive(true);
-                isPackingInProgress = false;
                 yield break;
             }
 
             if (string.IsNullOrEmpty(tag.Sku))
             {
-                popup.SetActive(true);
-                itemTagPopup.SetActive(true);
-                itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
-                isPackingInProgress = false;
                 yield break;
             }
 
             yield return CheckItemAvailability(tag.TransactionCode, tag.Sku);
+            yield return new WaitForSeconds(3000);
             isPackingInProgress = false;
         }
 
@@ -338,9 +331,7 @@ namespace Rfid
                 }
                 else
                 {
-                    popup.SetActive(true);
-                    itemTagPopup.SetActive(true);
-                    itemTagPopup.transform.Find("Tag Not Registered").gameObject.SetActive(true);
+                    ClearTagInformation();
                 }
             }
 

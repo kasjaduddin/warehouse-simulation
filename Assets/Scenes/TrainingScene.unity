@@ -23968,6 +23968,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: PlayerHand
       objectReference: {fileID: 0}
+    - target: {fileID: 1767224799749263632, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e42270a11c28f4744b73a18278e4ef33, type: 2}
     - target: {fileID: 2218496723442559053, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       propertyPath: m_LocalPosition.x
       value: -7.5
@@ -24092,6 +24096,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8761454206906519439, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e42270a11c28f4744b73a18278e4ef33, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 3272665201281909261, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
