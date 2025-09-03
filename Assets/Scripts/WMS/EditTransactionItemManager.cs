@@ -54,6 +54,7 @@ namespace CompanySystem
                 if (option.text == $"{TransactionDetailManager.selectedRecord.Sku} - {TransactionDetailManager.selectedRecord.ItemName}")
                 {
                     itemDropdown.value = itemDropdown.options.IndexOf(option);
+                    itemDropdown.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = option.text;
                     break;
                 }
             }

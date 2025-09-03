@@ -40,7 +40,6 @@ namespace Rfid
 
         private string pendingTransactionCode;
         private string pendingSku;
-        private int pendingTransactionQty;
 
         private void OnEnable()
         {
@@ -144,50 +143,36 @@ namespace Rfid
             }
 
             yield return CheckItemAvailability(tag.TransactionCode, tag.Sku);
+            if (!packing) yield break;
+
             yield return new WaitForSeconds(3000);
             isPackingInProgress = false;
         }
 
         private IEnumerator CheckItemAvailability(string transactionCode, string sku)
         {
-            int transactionQty = -1;
             int itemQty = -1;
-            bool? successTransaction = null;
-            bool? successItem = null;
-
-            yield return StartCoroutine(FirebaseServices.ReadData("transactions", "code", transactionCode, "items", "sku", sku, data =>
-            {
-                if (data != null)
-                {
-                    transactionQty = int.Parse(data["quantity"].ToString());
-                    successTransaction = true;
-                }
-                else
-                {
-                    successTransaction = false;
-                }
-            }));
+            bool? successReadItem = null;
 
             yield return StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
             {
                 if (data != null)
                 {
                     itemQty = int.Parse(data["quantity"].ToString());
-                    successItem = true;
+                    successReadItem = true;
                 }
                 else
                 {
-                    successItem = false;
+                    successReadItem = false;
                 }
             }));
 
-            yield return new WaitUntil(() => successTransaction.HasValue && successItem.HasValue);
+            yield return new WaitUntil(() => successReadItem.HasValue);
 
-            if (successTransaction.Value && successItem.Value && itemQty >= transactionQty)
+            if (successReadItem.Value)
             {
                 pendingTransactionCode = transactionCode;
                 pendingSku = sku;
-                pendingTransactionQty = transactionQty;
 
                 popup.SetActive(true);
                 itemTagPopup.SetActive(true);
@@ -211,26 +196,24 @@ namespace Rfid
 
         private void OnConfirmPacking()
         {
-            StartCoroutine(PackingItem(pendingTransactionCode, pendingSku, pendingTransactionQty));
+            StartCoroutine(PackingItem(pendingTransactionCode, pendingSku));
 
             Transform readyPopup = itemTagPopup.transform.Find("Ready for Packing");
             readyPopup.gameObject.SetActive(false);
         }
 
-        private IEnumerator PackingItem(string transactionCode, string sku, int transactionQty)
+        private IEnumerator PackingItem(string transactionCode, string sku)
         {
             bool? successItemUpdate = null;
-            bool? successTransactionUpdate = null;
             bool? successReservationUpdate = null;
             bool? successTagDelete = null;
 
-            // 1. Update quantity di items
             yield return StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
             {
                 if (data != null)
                 {
                     int currentQty = int.Parse(data["quantity"].ToString());
-                    int newQty = currentQty - transactionQty;
+                    int newQty = currentQty - 1;
 
                     var updatedData = new Dictionary<string, object>
                     {
@@ -249,24 +232,12 @@ namespace Rfid
                 }
             }));
 
-            // 2. Tandai item di transaksi sebagai packed
-            var packedData = new Dictionary<string, object>
-            {
-                { "information", "packed" },
-                { "sku", sku }
-            };
-            yield return StartCoroutine(FirebaseServices.ModifyData("transactions", "code", transactionCode, "items", packedData, sku, "sku", msg =>
-            {
-                successTransactionUpdate = msg.Contains("successfully");
-            }));
-
-            // 3. Update quantity dan packed status di reservation
             yield return StartCoroutine(FirebaseServices.ReadData("reservations", "code", selectedReservation.text, "items", "sku", sku, data =>
             {
                 if (data != null)
                 {
                     int currentQty = int.Parse(data["quantity"].ToString());
-                    int newQty = currentQty - transactionQty;
+                    int newQty = currentQty - 1;
 
                     var updatedData = new Dictionary<string, object>
                     {
@@ -295,16 +266,15 @@ namespace Rfid
                 successTagDelete = msg.Contains("successfully");
             }));
 
-            // 5. Tunggu semua operasi selesai
             yield return new WaitUntil(() =>
                 successItemUpdate.HasValue &&
-                successTransactionUpdate.HasValue &&
                 successReservationUpdate.HasValue &&
                 successTagDelete.HasValue
             );
 
-            if (successItemUpdate.Value && successTransactionUpdate.Value && successReservationUpdate.Value && successTagDelete.Value)
+            if (successItemUpdate.Value && successReservationUpdate.Value && successTagDelete.Value)
             {
+                yield return new WaitForSeconds(0.2f);
                 StartCoroutine(GetItems(selectedReservation.text));
             }
             else
@@ -313,6 +283,8 @@ namespace Rfid
                 itemTagPopup.SetActive(true);
                 itemTagPopup.transform.Find("Error Packing Item").gameObject.SetActive(true);
             }
+
+            isPackingInProgress = false;
         }
 
 

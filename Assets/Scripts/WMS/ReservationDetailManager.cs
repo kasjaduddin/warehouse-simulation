@@ -175,31 +175,11 @@ namespace CompanySystem
         private IEnumerator ApproveItem(string code, string sku)
         {
             bool reservationUpdated = false;
-            bool itemUpdated = false;
-            int newQuantity = 0;
 
-            StartCoroutine(FirebaseServices.ReadData("items", "sku", sku, data =>
-            {
-                if (data != null)
-                {
-                    newQuantity = int.Parse(data["quantity"].ToString()) - selectedRecord.Quantity; Debug.Log($"{data["quantity"]}+{selectedRecord.Quantity}={newQuantity}");
-                }
-                else
-                {
-                    Debug.LogError("Failed to retrieve data.");
-                }
-            }));
-
-            var newItemData = new Dictionary<string, object>
+            var newReservationData = new Dictionary<string, object>
             {
                 { "sku", selectedRecord.Sku },
                 { "information", "approved" }
-            };
-            yield return new WaitUntil(() => newQuantity != 0);
-            var newItemQuantity = new Dictionary<string, object>
-            {
-                { "sku", selectedRecord.Sku },
-                { "quantity", newQuantity }
             };
 
             ShowPopup();
@@ -224,25 +204,18 @@ namespace CompanySystem
 
             entry.callback.AddListener((eventData) =>
             {
-                StartCoroutine(FirebaseServices.ModifyData("reservations", "code", code, "items", newItemData, sku, "sku", updateResult =>
+                StartCoroutine(FirebaseServices.ModifyData("reservations", "code", code, "items", newReservationData, sku, "sku", updateResult =>
                 {
                     if (updateResult.Contains("successfully"))
                     {
-                        reservationUpdated = true; Debug.Log(updateResult);
-                    }
-                }));
-                StartCoroutine(FirebaseServices.ModifyData("items", newItemQuantity, sku, "sku", updateResult =>
-                {
-                    if (updateResult.Contains("successfully"))
-                    {
-                        itemUpdated = true; Debug.Log(updateResult);
+                        reservationUpdated = true;
                     }
                 }));
             });
             trigger.triggers.Add(entry);
 
-            yield return new WaitUntil(() => reservationUpdated && itemUpdated);
-            if (reservationUpdated && itemUpdated)
+            yield return new WaitUntil(() => reservationUpdated);
+            if (reservationUpdated)
             {
                 HidePopup();
                 StartCoroutine(RefreshTable());
@@ -251,7 +224,7 @@ namespace CompanySystem
 
         private void RejectItem(string code, string sku)
         {
-            var newItemData = new Dictionary<string, object>
+            var newReservationData = new Dictionary<string, object>
             {
                 { "sku", sku },
                 { "information", "rejected" }
@@ -279,7 +252,7 @@ namespace CompanySystem
 
             entry.callback.AddListener((eventData) =>
             {
-                StartCoroutine(FirebaseServices.ModifyData("reservations", "code", code, "items", newItemData, sku, "sku", updateResult =>
+                StartCoroutine(FirebaseServices.ModifyData("reservations", "code", code, "items", newReservationData, sku, "sku", updateResult =>
                 {
                     if (updateResult.Contains("successfully"))
                     {
