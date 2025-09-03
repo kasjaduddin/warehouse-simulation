@@ -78,7 +78,7 @@ namespace CompanySystem
                 { "item_name", data["item_name"].ToString() },
                 { "quantity", quantity },
                 { "information", "unprocessed" },
-                { "tagged", false }
+                { "tagged", 0 }
             };
 
             StartCoroutine(FirebaseServices.WriteData("transactions", "code", code, "items", newTransactionItem, "sku", message =>

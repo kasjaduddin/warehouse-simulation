@@ -55,6 +55,7 @@ namespace CompanySystem
                 if (option.text == ItemListManager.selectedRecord.BinCode.ToString())
                 {
                     binCodeDropdown.value = binCodeDropdown.options.IndexOf(option);
+                    binCodeDropdown.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = option.text;
                     break;
                 }
             }

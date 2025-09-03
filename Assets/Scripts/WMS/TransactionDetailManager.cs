@@ -215,14 +215,14 @@ namespace CompanySystem
                 {
                     if (updateResult.Contains("successfully"))
                     {
-                        transactionUpdated = true;Debug.Log(updateResult);
+                        transactionUpdated = true;
                     }
                 }));
                 StartCoroutine(FirebaseServices.ModifyData("items", newItemQuantity, sku, "sku", updateResult =>
                 {
                     if (updateResult.Contains("successfully"))
                     {
-                        itemUpdated = true; Debug.Log(updateResult);
+                        itemUpdated = true;
                     }
                 }));
             });

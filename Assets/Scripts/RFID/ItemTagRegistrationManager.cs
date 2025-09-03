@@ -240,8 +240,10 @@ namespace Rfid
 
         private IEnumerator UpdateDataOnCompanySystem(string transactionCode, string sku, bool addTag)
         {
-            int currentTags = -1;
-            bool? successReadData = null;
+            int currentItemTags = -1;
+            int currentTransactionItemTags = -1;
+            bool? successReadItemData = null;
+            bool? successReadTransactionData = null;
             bool? successModifyItemData = null;
             bool? successModifyTransactionData = null;
 
@@ -249,8 +251,8 @@ namespace Rfid
             {
                 if (data != null)
                 {
-                    currentTags = int.Parse(data["number_of_tags"].ToString());
-                    successReadData = true;
+                    currentItemTags = int.Parse(data["number_of_tags"].ToString());
+                    successReadItemData = true;
                 }
                 else
                 {
@@ -266,15 +268,39 @@ namespace Rfid
                         itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
                     }
 
-                    successReadData = false;
+                    successReadItemData = false;
                 }
             });
 
-            yield return new WaitUntil(() => successReadData != null);
-            if (successReadData == true)
+            yield return FirebaseServices.ReadData("transactions", "code", transactionCode, "items", "sku", sku, data => 
             {
-                int newTagCount = addTag ? currentTags + 1 : currentTags - 1;
-                bool newTagged = addTag;
+                if (data != null)
+                {
+                    currentTransactionItemTags = int.Parse(data["tagged"].ToString());
+                    successReadTransactionData = true;
+                }
+                else
+                {
+                    popup.SetActive(true);
+                    itemTagPopup.SetActive(true);
+
+                    if (addTag)
+                    {
+                        itemTagPopup.transform.Find("Error Write Tag").gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        itemTagPopup.transform.Find("Error Remove Tag Data").gameObject.SetActive(true);
+                    }
+                    successReadTransactionData = false;
+                }
+            });
+
+            yield return new WaitUntil(() => successReadItemData.HasValue && successReadTransactionData.HasValue);
+            if (successReadItemData.Value && successReadTransactionData.Value)
+            {
+                int newTagCount = addTag ? currentItemTags + 1 : currentItemTags - 1;
+                int newTransactionTagCount = addTag ? currentTransactionItemTags + 1 : currentTransactionItemTags - 1;
                 var itemData = new Dictionary<string, object>
                 {
                     { "number_of_tags", newTagCount }
@@ -282,7 +308,7 @@ namespace Rfid
                 var transactionData = new Dictionary<string, object>
                 {
                     { "sku", sku },
-                    { "tagged", newTagged }
+                    { "tagged", newTransactionTagCount }
                 };
 
                 yield return StartCoroutine(FirebaseServices.ModifyData("items", itemData, sku, "sku", message =>
@@ -394,7 +420,7 @@ namespace Rfid
                 TransactionItem item = transactionRecord.Items[j];
 
                 // Fill the UI elements with data
-                if (item.Information.Equals("approved") && !item.Tagged)
+                if (item.Information.Equals("approved") && (item.Tagged != item.Quantity))
                 {
                     GameObject newRow = Instantiate(recordTemplate, container);
                     Transform newRowTransform = newRow.transform;

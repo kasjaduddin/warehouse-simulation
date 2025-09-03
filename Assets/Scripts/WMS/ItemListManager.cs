@@ -24,7 +24,7 @@ namespace CompanySystem
         void OnEnable()
         {
             // Invoke GetData method after a short delay
-            Invoke("GetData", 0.1f);
+            Invoke("GetData", 0.15f);
         }
 
         private void OnDisable()

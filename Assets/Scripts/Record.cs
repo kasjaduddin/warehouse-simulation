@@ -69,7 +69,7 @@ namespace Record
             public string ItemName;
             public int Quantity;
             public string Information;
-            public bool Tagged;
+            public int Tagged;
 
             public TransactionItem(JObject item)
             {
@@ -77,7 +77,7 @@ namespace Record
                 ItemName = item["item_name"].ToString();
                 Quantity = int.Parse(item["quantity"].ToString());
                 Information = item["information"].ToString();
-                Tagged = bool.Parse(item["tagged"].ToString());
+                Tagged = int.Parse(item["tagged"].ToString());
             }
 
             public Dictionary<string, object> ToDictionary()
