@@ -6,11 +6,11 @@ public class WindowsManager : MonoBehaviour
     [SerializeField]
     private GameObject window; // Window game object
     [SerializeField]
+    private GameObject notepad; // Notepad game object
+    [SerializeField]
     private GameObject companySystem; // Company system game object
     [SerializeField]
     private GameObject rfid; // RFID game object
-    [SerializeField]
-    private GameObject pomQm; // POM QM game object
 
     public void OpenWindow()
     {
@@ -27,6 +27,11 @@ public class WindowsManager : MonoBehaviour
         window.SetActive(false);
     }
 
+    public void OnClickNotepadShortcut()
+    {
+        StartCoroutine(OpenNotepad());
+    }
+
     public void OnClickCompanySystemShortcut()
     {
         StartCoroutine(OpenCompanySystem());
@@ -35,6 +40,21 @@ public class WindowsManager : MonoBehaviour
     public void OnClickRfidShortcut()
     {
         StartCoroutine(OpenRfid());
+    }
+
+    private IEnumerator OpenNotepad()
+    {
+        if (!notepad.activeSelf)
+        {
+            CloseNotepad();
+            yield return new WaitForSeconds(0.1f);
+            notepad.SetActive(true);
+        }
+    }
+
+    public void CloseNotepad()
+    {
+        notepad.SetActive(false);
     }
 
     private IEnumerator OpenCompanySystem()
